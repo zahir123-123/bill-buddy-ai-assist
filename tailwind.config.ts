@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,13 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				assistant: {
+					purple: '#9b87f5',
+					darkPurple: '#1A1F2C',
+					lightPurple: '#D6BCFA',
+					blue: '#1EAEDB',
+					skyBlue: '#33C3F0'
 				}
 			},
 			borderRadius: {
@@ -84,11 +92,33 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-ring': {
+					'0%': { transform: 'scale(0.8)', opacity: '0.8' },
+					'70%': { transform: 'scale(1.3)', opacity: '0' },
+					'100%': { transform: 'scale(0.8)', opacity: '0' }
+				},
+				'pulse-dot': {
+					'0%': { transform: 'scale(0.8)' },
+					'50%': { transform: 'scale(1.1)' },
+					'100%': { transform: 'scale(0.8)' }
+				},
+				'wave': {
+					'0%': { transform: 'scaleY(0.5)' },
+					'50%': { transform: 'scaleY(1.0)' },
+					'100%': { transform: 'scaleY(0.5)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-ring': 'pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite',
+				'pulse-dot': 'pulse-dot 1.5s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite',
+				'wave-1': 'wave 1.2s linear infinite',
+				'wave-2': 'wave 1.2s linear infinite 0.15s',
+				'wave-3': 'wave 1.2s linear infinite 0.3s',
+				'wave-4': 'wave 1.2s linear infinite 0.45s',
+				'wave-5': 'wave 1.2s linear infinite 0.6s'
 			}
 		}
 	},
