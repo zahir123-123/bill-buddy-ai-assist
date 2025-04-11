@@ -79,13 +79,19 @@ const config = {
         },
         "pulse-ring": {
           "0%": { transform: "scale(0.95)", opacity: "1" },
-          "100%": { transform: "scale(1.5)", opacity: "0" }
+          "100%": { transform: "scale(1.8)", opacity: "0" }
+        },
+        "siri-wave": {
+          "0%": { height: "5px", transform: "translateY(0)" },
+          "50%": { height: "20px", transform: "translateY(-5px)" },
+          "100%": { height: "5px", transform: "translateY(0)" }
         }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "pulse-ring": "pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite"
+        "pulse-ring": "pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "siri-wave": "siri-wave 1.5s infinite ease-in-out"
       },
     },
   },

@@ -4,6 +4,7 @@ import { Mic, MicOff, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface VoiceAssistantProps {
   onCommand: (command: string) => void;
@@ -26,9 +27,11 @@ const VoiceAssistant = ({
 }: VoiceAssistantProps) => {
   const [showWaveAnimation, setShowWaveAnimation] = useState(false);
   const [assistantMessage, setAssistantMessage] = useState("How can I help you?");
+  const [processingCommand, setProcessingCommand] = useState(false);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
+  const navigate = useNavigate();
+  
   // Initialize speech synthesis
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -64,40 +67,46 @@ const VoiceAssistant = ({
     if (isListening) {
       setShowWaveAnimation(true);
       setAssistantMessage("Listening...");
+      speak("Listening...");
     } else {
       const timeout = setTimeout(() => {
         setShowWaveAnimation(false);
       }, 300);
-      setAssistantMessage("How can I help you?");
+      
+      if (!processingCommand) {
+        setAssistantMessage("How can I help you?");
+      }
+      
       return () => clearTimeout(timeout);
     }
-  }, [isListening]);
+  }, [isListening, processingCommand]);
 
-  // Speak the assistant message when it changes
+  // Process transcript when listening
   useEffect(() => {
-    if (isActive && assistantMessage) {
-      speak(assistantMessage);
-    }
-  }, [assistantMessage, isActive]);
-
-  useEffect(() => {
-    // Process transcript when listening
     if (isListening && transcript) {
       const lowerTranscript = transcript.toLowerCase();
       
-      if ((lowerTranscript.includes("sell") && lowerTranscript.includes("bill")) || 
+      // Check for bill creation commands
+      if (lowerTranscript.includes("bill banao") || 
           lowerTranscript.includes("create bill") || 
-          lowerTranscript.includes("new sale") ||
-          lowerTranscript.includes("create a sell bill")) {
+          lowerTranscript.includes("sell product") ||
+          lowerTranscript.includes("create a sell bill") ||
+          lowerTranscript.includes("sell bill")) {
         
         stopListening();
-        setAssistantMessage("Creating a new sale. Please provide the details.");
+        setProcessingCommand(true);
+        setAssistantMessage("Creating a new bill. Let me take you to the sales page.");
+        speak("Creating a new bill. Let me take you to the sales page.");
+        
         setTimeout(() => {
-          onCommand("create_sale");
-        }, 1500);
+          navigate("/sell-products");
+          onClose();
+          setProcessingCommand(false);
+          toast.success("Sales page opened successfully");
+        }, 2500);
       }
     }
-  }, [transcript, isListening, stopListening, onCommand]);
+  }, [transcript, isListening, stopListening, onCommand, navigate, onClose]);
 
   if (!isActive) return null;
 
@@ -117,11 +126,15 @@ const VoiceAssistant = ({
         
         <div className="px-6 pb-8 pt-2 flex flex-col items-center">
           <div className="relative flex justify-center my-8">
-            {/* Pulsating ring animation */}
-            <div className={cn(
-              "absolute w-28 h-28 rounded-full",
-              isListening ? "bg-assistant-purple/30 animate-pulse-ring" : "bg-gray-600/20"
-            )} />
+            {/* Siri-like animation */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              {isListening && (
+                <>
+                  <div className="absolute w-28 h-28 rounded-full bg-assistant-purple/20 animate-pulse"></div>
+                  <div className="absolute w-24 h-24 rounded-full bg-assistant-purple/30 animate-pulse-ring" style={{ animationDelay: "0.2s" }}></div>
+                </>
+              )}
+            </div>
             
             {/* Center button */}
             <button
@@ -141,14 +154,14 @@ const VoiceAssistant = ({
           
           {showWaveAnimation && (
             <div className="flex justify-center space-x-1 h-12 items-center my-2">
-              {[1, 2, 3, 4, 5].map((num) => (
+              {[1, 2, 3, 4, 5, 6, 7].map((num) => (
                 <div
                   key={num}
-                  className="w-1.5 bg-assistant-purple rounded-full h-8 animate-pulse"
+                  className="w-1.5 bg-assistant-purple rounded-full animate-bounce"
                   style={{ 
+                    height: `${Math.max(8, Math.min(32, 10 + num * 3))}px`,
                     animationDelay: `${num * 0.1}s`,
-                    animationDuration: "1s",
-                    transformOrigin: "bottom"
+                    animationDuration: "0.8s"
                   }}
                 />
               ))}
@@ -160,7 +173,7 @@ const VoiceAssistant = ({
               {assistantMessage}
             </h3>
             <p className="text-white/70 text-sm min-h-[48px]">
-              {transcript || "Try saying: 'Sell bill' to create a new sale"}
+              {transcript || "Try saying: 'Create bill' or 'Sell product'"}
             </p>
           </div>
         </div>

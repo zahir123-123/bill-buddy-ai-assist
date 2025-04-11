@@ -17,6 +17,7 @@ interface SpeechRecognitionEvent {
     [index: number]: {
       [index: number]: {
         transcript: string;
+        confidence: number;
       };
     };
   };
@@ -51,21 +52,35 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
       recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
         const current = event.resultIndex;
         const transcript = event.results[current][0].transcript;
-        setTranscript(transcript);
+        const confidence = event.results[current][0].confidence;
+        
+        console.log("Speech recognized:", transcript, "Confidence:", confidence);
+        
+        if (event.results[current].isFinal || confidence > 0.7) {
+          setTranscript(transcript);
+        }
       };
       
       recognitionInstance.onerror = (event: any) => {
         console.error('Speech recognition error', event);
+        if (event.error === 'no-speech') {
+          console.log("No speech detected");
+        }
         stopListening();
       };
       
       recognitionInstance.onend = () => {
         if (isListening) {
+          console.log("Recognition ended but still listening, restarting...");
           recognitionInstance.start();
+        } else {
+          console.log("Recognition ended");
         }
       };
       
       setRecognition(recognitionInstance);
+    } else {
+      console.warn("Speech recognition not supported");
     }
     
     // Cleanup
@@ -77,25 +92,33 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
   }, []);
 
   const startListening = useCallback(() => {
-    if (!recognition) return;
+    if (!recognition) {
+      console.warn("Speech recognition not initialized");
+      return;
+    }
     
     setIsListening(true);
     setTranscript("");
     
     try {
       recognition.start();
+      console.log("Speech recognition started");
     } catch (error) {
       console.error('Failed to start recognition:', error);
     }
   }, [recognition]);
 
   const stopListening = useCallback(() => {
-    if (!recognition) return;
+    if (!recognition) {
+      console.warn("Speech recognition not initialized");
+      return;
+    }
     
     setIsListening(false);
     
     try {
       recognition.stop();
+      console.log("Speech recognition stopped");
     } catch (error) {
       console.error('Failed to stop recognition:', error);
     }
