@@ -15,6 +15,7 @@ const Index = () => {
   
   const {
     transcript,
+    interimTranscript,
     isListening,
     startListening,
     stopListening,
@@ -26,6 +27,9 @@ const Index = () => {
   const handleCommandReceived = (command: string) => {
     if (command === "create_sale") {
       navigate("/sell-products");
+    } else if (command === "generate_bill") {
+      // This would be handled in the SellProducts page
+      toast.success("Bill generation started");
     }
   };
 
@@ -113,6 +117,7 @@ const Index = () => {
         onCommand={handleCommandReceived}
         onClose={handleCloseAssistant}
         transcript={transcript}
+        interimTranscript={interimTranscript}
       />
     </div>
   );

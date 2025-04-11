@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -10,11 +9,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Search, Plus, Package } from "lucide-react";
+import { X, Search, Plus, Package, Mic } from "lucide-react";
 import { toast } from "sonner";
 import BackButton from "@/components/BackButton";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import VoiceAssistant from "@/components/VoiceAssistant";
 
 interface Product {
   id: string;
@@ -46,6 +47,17 @@ const SellProducts = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  
+  const [assistantActive, setAssistantActive] = useState(false);
+  const {
+    transcript,
+    interimTranscript,
+    isListening,
+    startListening,
+    stopListening,
+    resetTranscript,
+    hasRecognitionSupport
+  } = useSpeechRecognition();
 
   useEffect(() => {
     const handleClickOutside = (event: globalThis.MouseEvent) => {
@@ -86,6 +98,15 @@ const SellProducts = () => {
     const debounceTimer = setTimeout(searchProducts, 300);
     return () => clearTimeout(debounceTimer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    const shouldActivateAssistant = new URLSearchParams(window.location.search).get('assistant') === 'true';
+    if (shouldActivateAssistant) {
+      setTimeout(() => {
+        handleActivateAssistant();
+      }, 1000);
+    }
+  }, []);
 
   const getImageUrl = (imageData: string | null): string => {
     return imageData || '/placeholder.svg';
@@ -254,16 +275,71 @@ const SellProducts = () => {
     }
   };
 
+  const handleActivateAssistant = () => {
+    setAssistantActive(true);
+    setTimeout(() => {
+      if (hasRecognitionSupport) {
+        startListening();
+      } else {
+        toast.error("Speech recognition is not supported in your browser");
+      }
+    }, 500);
+  };
+
+  const handleCloseAssistant = () => {
+    stopListening();
+    resetTranscript();
+    setAssistantActive(false);
+  };
+  
+  const handleAssistantCommand = (command: string) => {
+    if (command === "generate_bill") {
+      handleGenerateBill();
+    }
+  };
+  
+  const handleFieldUpdate = (field: string, value: string) => {
+    switch (field) {
+      case "customer_name":
+        setCustomerName(value);
+        break;
+      case "vehicle_info":
+        setVehicleInfo(value);
+        break;
+      default:
+        break;
+    }
+  };
+  
+  const handleProductSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+  
+  const handleProductSelect = (index: number) => {
+    if (searchResults && index >= 0 && index < searchResults.length) {
+      addToCart(searchResults[index]);
+    }
+  };
+
   return (
     <Layout title="Sell Products">
       <div className="space-y-4 pb-4">
         <div className="flex items-center justify-between px-2">
           <BackButton to="/" />
-          <h2 className="text-lg font-semibold md:hidden">Create New Bill</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold md:hidden">Create New Bill</h2>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleActivateAssistant}
+              className="ml-2"
+            >
+              <Mic className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-[1fr,400px] px-2">
-          {/* Customer & Search Section */}
           <Card className="order-2 md:order-1">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Customer Details</CardTitle>
@@ -344,7 +420,6 @@ const SellProducts = () => {
             </CardContent>
           </Card>
 
-          {/* Cart Section */}
           <Card className="order-1 md:order-2 sticky top-4">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -446,6 +521,21 @@ const SellProducts = () => {
           </Card>
         </div>
       </div>
+      
+      <VoiceAssistant 
+        isActive={assistantActive}
+        isListening={isListening}
+        startListening={startListening}
+        stopListening={stopListening}
+        onCommand={handleAssistantCommand}
+        onClose={handleCloseAssistant}
+        transcript={transcript}
+        interimTranscript={interimTranscript}
+        onFieldUpdate={handleFieldUpdate}
+        onProductSearch={handleProductSearch}
+        onProductSelect={handleProductSelect}
+        searchResults={searchResults}
+      />
     </Layout>
   );
 };

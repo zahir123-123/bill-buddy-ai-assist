@@ -8,6 +8,7 @@ interface SpeechRecognitionHook {
   stopListening: () => void;
   resetTranscript: () => void;
   hasRecognitionSupport: boolean;
+  interimTranscript: string; // Add interim transcript for real-time feedback
 }
 
 // Define types for the Web Speech API
@@ -34,6 +35,7 @@ declare global {
 
 export function useSpeechRecognition(): SpeechRecognitionHook {
   const [transcript, setTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [hasRecognitionSupport, setHasRecognitionSupport] = useState(false);
@@ -51,15 +53,26 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
       recognitionInstance.lang = 'en-US';
       
       recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
-        const current = event.resultIndex;
-        const transcript = event.results[current][0].transcript;
-        const confidence = event.results[current][0].confidence;
+        let interimText = '';
+        let finalText = '';
         
-        console.log("Speech recognized:", transcript, "Confidence:", confidence);
-        
-        if (event.results[current].isFinal || confidence > 0.7) {
-          setTranscript(transcript);
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          
+          if (event.results[i].isFinal) {
+            finalText += transcript + ' ';
+            console.log("Final transcript:", transcript);
+          } else {
+            interimText += transcript;
+            console.log("Interim transcript:", transcript);
+          }
         }
+        
+        if (finalText) {
+          setTranscript(finalText.trim());
+        }
+        
+        setInterimTranscript(interimText);
       };
       
       recognitionInstance.onerror = (event: any) => {
@@ -76,6 +89,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
           recognitionInstance.start();
         } else {
           console.log("Recognition ended");
+          setInterimTranscript("");
         }
       };
       
@@ -90,7 +104,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
         recognition.stop();
       }
     };
-  }, []);
+  }, [isListening]);
 
   const startListening = useCallback(() => {
     if (!recognition) {
@@ -100,6 +114,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     
     setIsListening(true);
     setTranscript("");
+    setInterimTranscript("");
     
     try {
       recognition.start();
@@ -127,10 +142,12 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
   const resetTranscript = useCallback(() => {
     setTranscript("");
+    setInterimTranscript("");
   }, []);
 
   return {
     transcript,
+    interimTranscript,
     isListening,
     startListening,
     stopListening,
