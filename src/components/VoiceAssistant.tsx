@@ -124,11 +124,8 @@ const VoiceAssistant = ({
       speak("Creating a new bill. Let me take you to the sales page.");
       
       setTimeout(() => {
-        navigate("/sell-products");
-        // Start the conversation flow
-        startConversationFlow();
+        navigate("/sell-products?assistant=true");
         setProcessingCommand(false);
-        toast.success("Sales page opened successfully");
       }, 2500);
     }
   }, [transcript, isListening, stopListening, onCommand, navigate, onClose, activeField]);
@@ -308,7 +305,6 @@ const VoiceAssistant = ({
       setConversationStep(0);
       setTimeout(() => {
         setAssistantMessage("How can I help you?");
-        onClose();
       }, 2000);
     } else {
       setAssistantMessage("Please say yes to add more products or no to generate the bill.");
@@ -316,6 +312,19 @@ const VoiceAssistant = ({
       startListening();
     }
   };
+
+  // Add this effect to automatically start the conversation flow when opened from a URL param
+  useEffect(() => {
+    if (isActive && conversationStep === 0 && !activeField) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('assistant') === 'true') {
+        // Give a small delay before starting the conversation
+        setTimeout(() => {
+          startConversationFlow();
+        }, 1000);
+      }
+    }
+  }, [isActive, conversationStep, activeField]);
 
   if (!isActive) return null;
 
