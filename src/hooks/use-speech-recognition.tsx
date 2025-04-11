@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 
 interface SpeechRecognitionHook {
@@ -14,7 +13,9 @@ interface SpeechRecognitionHook {
 // Define types for the Web Speech API
 interface SpeechRecognitionEvent {
   resultIndex: number;
+  // Update the results type to include length and be iterable like an array
   results: {
+    length: number;
     [index: number]: {
       [index: number]: {
         transcript: string;
