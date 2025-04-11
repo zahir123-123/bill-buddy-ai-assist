@@ -10,6 +10,26 @@ interface SpeechRecognitionHook {
   hasRecognitionSupport: boolean;
 }
 
+// Define types for the Web Speech API
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+}
+
+// Define window with the speech recognition properties
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 export function useSpeechRecognition(): SpeechRecognitionHook {
   const [transcript, setTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -18,7 +38,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
   useEffect(() => {
     // Check if browser supports SpeechRecognition
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
     if (SpeechRecognition) {
       setHasRecognitionSupport(true);
@@ -28,7 +48,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
       recognitionInstance.interimResults = true;
       recognitionInstance.lang = 'en-US';
       
-      recognitionInstance.onresult = (event: any) => {
+      recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
         const current = event.resultIndex;
         const transcript = event.results[current][0].transcript;
         setTranscript(transcript);

@@ -8,6 +8,7 @@ import VoiceAssistant from "@/components/VoiceAssistant";
 import SaleDetailsDialog from "@/components/SaleDetailsDialog";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SaleDetails {
   customerName: string;
@@ -32,41 +33,64 @@ const Index = () => {
     hasRecognitionSupport
   } = useSpeechRecognition();
 
-  useEffect(() => {
-    if (!isListening || processingCommand) return;
-
-    const lowerTranscript = transcript.toLowerCase();
+  // Handle command processing
+  const handleCommandReceived = (command: string) => {
+    setProcessingCommand(true);
+    setLastCommand(command);
     
-    if ((lowerTranscript.includes("sell") && lowerTranscript.includes("bill")) || 
-        lowerTranscript.includes("create bill") || 
-        lowerTranscript.includes("new sale")) {
-      
-      setProcessingCommand(true);
-      setLastCommand(transcript);
-      
+    if (command === "create_sale") {
       setTimeout(() => {
-        stopListening();
-        resetTranscript();
         setShowSaleDialog(true);
         setProcessingCommand(false);
-      }, 1000);
-    }
-  }, [transcript, isListening, processingCommand, stopListening, resetTranscript]);
-
-  const handleCommandReceived = (command: string) => {
-    const lowerCommand = command.toLowerCase();
-    
-    if ((lowerCommand.includes("sell") && lowerCommand.includes("bill")) || 
-        lowerCommand.includes("create bill") || 
-        lowerCommand.includes("new sale")) {
-      setShowSaleDialog(true);
+      }, 500);
     }
   };
 
-  const handleSaveSale = (details: SaleDetails) => {
-    console.log("Sale saved:", details);
-    // Here you would typically save this to Supabase
-    // This is a placeholder for the actual implementation
+  // Save sale details to Supabase
+  const handleSaveSale = async (details: SaleDetails) => {
+    try {
+      // Generate a bill number
+      const billNumber = `BILL-${Date.now()}`;
+      
+      // Calculate total amount
+      const totalAmount = details.quantity * details.price;
+      
+      // Save bill to Supabase
+      const { data: billData, error: billError } = await supabase
+        .from('bills')
+        .insert({
+          customer_name: details.customerName,
+          vehicle_info: details.vehicleInfo,
+          bill_number: billNumber,
+          total_amount: totalAmount,
+          payment_method: 'cash'
+        })
+        .select('id')
+        .single();
+      
+      if (billError) throw billError;
+      
+      // Save bill items
+      const { error: itemsError } = await supabase
+        .from('bill_items')
+        .insert({
+          bill_id: billData.id,
+          product_name: details.productName,
+          quantity: details.quantity,
+          unit_price: details.price,
+          total_price: totalAmount
+        });
+      
+      if (itemsError) throw itemsError;
+      
+      toast.success(`Sale was successfully saved with bill number ${billNumber}`);
+      
+      // Close the dialog after successful save
+      setShowSaleDialog(false);
+    } catch (error) {
+      console.error("Error saving sale:", error);
+      toast.error("Failed to save sale. Please try again.");
+    }
   };
 
   const handleActivateAssistant = () => {

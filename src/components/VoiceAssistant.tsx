@@ -25,17 +25,79 @@ const VoiceAssistant = ({
   transcript
 }: VoiceAssistantProps) => {
   const [showWaveAnimation, setShowWaveAnimation] = useState(false);
+  const [assistantMessage, setAssistantMessage] = useState("How can I help you?");
+  const synthRef = useRef<SpeechSynthesis | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+  // Initialize speech synthesis
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      synthRef.current = window.speechSynthesis;
+      utteranceRef.current = new SpeechSynthesisUtterance();
+      utteranceRef.current.rate = 1;
+      utteranceRef.current.pitch = 1;
+      utteranceRef.current.volume = 1;
+    }
+
+    return () => {
+      if (synthRef.current && synthRef.current.speaking) {
+        synthRef.current.cancel();
+      }
+    };
+  }, []);
+
+  // Speak messages
+  const speak = (text: string) => {
+    if (!synthRef.current || !utteranceRef.current) return;
+    
+    // Cancel any ongoing speech
+    if (synthRef.current.speaking) {
+      synthRef.current.cancel();
+    }
+
+    utteranceRef.current.text = text;
+    synthRef.current.speak(utteranceRef.current);
+  };
+
+  // Update UI when listening state changes
   useEffect(() => {
     if (isListening) {
       setShowWaveAnimation(true);
+      setAssistantMessage("Listening...");
     } else {
       const timeout = setTimeout(() => {
         setShowWaveAnimation(false);
       }, 300);
+      setAssistantMessage("How can I help you?");
       return () => clearTimeout(timeout);
     }
   }, [isListening]);
+
+  // Speak the assistant message when it changes
+  useEffect(() => {
+    if (isActive && assistantMessage) {
+      speak(assistantMessage);
+    }
+  }, [assistantMessage, isActive]);
+
+  useEffect(() => {
+    // Process transcript when listening
+    if (isListening && transcript) {
+      const lowerTranscript = transcript.toLowerCase();
+      
+      if ((lowerTranscript.includes("sell") && lowerTranscript.includes("bill")) || 
+          lowerTranscript.includes("create bill") || 
+          lowerTranscript.includes("new sale") ||
+          lowerTranscript.includes("create a sell bill")) {
+        
+        stopListening();
+        setAssistantMessage("Creating a new sale. Please provide the details.");
+        setTimeout(() => {
+          onCommand("create_sale");
+        }, 1500);
+      }
+    }
+  }, [transcript, isListening, stopListening, onCommand]);
 
   if (!isActive) return null;
 
@@ -82,8 +144,12 @@ const VoiceAssistant = ({
               {[1, 2, 3, 4, 5].map((num) => (
                 <div
                   key={num}
-                  className={`w-1.5 bg-assistant-purple rounded-full animate-wave-${num} h-8`}
-                  style={{ transformOrigin: "bottom" }}
+                  className="w-1.5 bg-assistant-purple rounded-full h-8 animate-pulse"
+                  style={{ 
+                    animationDelay: `${num * 0.1}s`,
+                    animationDuration: "1s",
+                    transformOrigin: "bottom"
+                  }}
                 />
               ))}
             </div>
@@ -91,7 +157,7 @@ const VoiceAssistant = ({
           
           <div className="text-center mt-2">
             <h3 className="text-xl font-medium text-white mb-2">
-              {isListening ? "Listening..." : "How can I help you?"}
+              {assistantMessage}
             </h3>
             <p className="text-white/70 text-sm min-h-[48px]">
               {transcript || "Try saying: 'Sell bill' to create a new sale"}
