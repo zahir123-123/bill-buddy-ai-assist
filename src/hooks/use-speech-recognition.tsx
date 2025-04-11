@@ -19,6 +19,7 @@ interface SpeechRecognitionEvent {
         transcript: string;
         confidence: number;
       };
+      isFinal: boolean;
     };
   };
 }
